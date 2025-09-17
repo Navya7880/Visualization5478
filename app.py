@@ -1,54 +1,58 @@
+import streamlit as st
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Generate some sample data
-np.random.seed(42)
-x = np.linspace(0, 10, 50)
-y = np.sin(x) + np.random.normal(0, 0.2, 50)
-categories = ['A', 'B', 'C', 'D']
-values = [23, 45, 56, 78]
-scatter_x = np.random.rand(50)
-scatter_y = np.random.rand(50)
-scatter_colors = np.random.rand(50)
-scatter_sizes = 500 * np.random.rand(50)
+st.title("📊 File Upload & Visualization App")
 
-# 1. Line Plot
-plt.figure(figsize=(6,4))
-plt.plot(x, y, marker='o', color='blue')
-plt.title('Line Plot')
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-plt.grid(True)
-plt.show()
+# File uploader
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
-# 2. Bar Chart
-plt.figure(figsize=(6,4))
-plt.bar(categories, values, color='green')
-plt.title('Bar Chart')
-plt.xlabel('Category')
-plt.ylabel('Values')
-plt.show()
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.write("### Preview of the uploaded file:")
+    st.dataframe(df.head())
 
-# 3. Histogram
-data = np.random.randn(1000)
-plt.figure(figsize=(6,4))
-plt.hist(data, bins=30, color='purple', edgecolor='black')
-plt.title('Histogram')
-plt.xlabel('Value')
-plt.ylabel('Frequency')
-plt.show()
+    # Select numeric columns only for visualization
+    numeric_columns = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
-# 4. Scatter Plot
-plt.figure(figsize=(6,4))
-plt.scatter(scatter_x, scatter_y, c=scatter_colors, s=scatter_sizes, alpha=0.5)
-plt.title('Scatter Plot')
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-plt.show()
+    if len(numeric_columns) < 1:
+        st.warning("No numeric columns found for visualization.")
+    else:
+        st.sidebar.header("Choose your visualization settings")
 
-# 5. Pie Chart
-plt.figure(figsize=(6,6))
-plt.pie(values, labels=categories, autopct='%1.1f%%', startangle=90)
-plt.title('Pie Chart')
-plt.show()
+        # Let user pick columns
+        x_axis = st.sidebar.selectbox("Select X-axis column", numeric_columns)
+        y_axis = st.sidebar.selectbox("Select Y-axis column (if applicable)", numeric_columns)
+
+        # Visualization options
+        chart_type = st.sidebar.multiselect(
+            "Choose up to 4 visualizations",
+            ["Line Chart", "Bar Chart", "Histogram", "Scatter Plot"],
+            default=["Line Chart", "Bar Chart"]
+        )
+
+        for chart in chart_type:
+            st.write(f"### {chart}")
+            fig, ax = plt.subplots(figsize=(6, 4))
+
+            if chart == "Line Chart":
+                ax.plot(df[x_axis], df[y_axis], marker='o')
+                ax.set_xlabel(x_axis)
+                ax.set_ylabel(y_axis)
+
+            elif chart == "Bar Chart":
+                sns.barplot(x=x_axis, y=y_axis, data=df, ax=ax)
+
+            elif chart == "Histogram":
+                sns.histplot(df[x_axis], bins=30, kde=True, ax=ax)
+
+            elif chart == "Scatter Plot":
+                ax.scatter(df[x_axis], df[y_axis], alpha=0.6)
+                ax.set_xlabel(x_axis)
+                ax.set_ylabel(y_axis)
+
+            st.pyplot(fig)
+else:
+    st.info("Please upload a CSV file to get started.")
+
